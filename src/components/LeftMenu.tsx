@@ -55,6 +55,7 @@ export default function LeftMenu() {
 
   useEffect(() => {
     setCategoriesTreeData(convertToTreeData(categories,0))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, currentCategory]);
 
   return (

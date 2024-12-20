@@ -1,11 +1,14 @@
 'use client';
 
 import React, { createContext, useState, useContext, useEffect } from "react";
+import type { CategoryTag } from '@/providers/ProductsProvider';
 
 
 export interface Category {
   id: number | null;
   name: string;
+  tag?: string;
+  path(): string[];
   children: Category[];
 };
 
@@ -16,6 +19,8 @@ export interface CategoryContextType {
   selectCategory: (id: number | null) => void,
   categoriesLoading: boolean;
   setCategoriesLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  updateCategory: (id: number | null, tag: string | null) => void;
+  tags: (nodes: Category[]) => {id: number, name: string}[]
 };
 
 export const CategoriesContext = createContext<CategoryContextType | null>(null);
@@ -35,15 +40,38 @@ export const CategoriesProvider = ({ children }: { children: React.ReactNode }) 
   }
 
   const selectCategory = (id: number | null): void => {
+    console.log('Setting category: ', id)
     setCurrentCategory( id ? findCategoryById(categories, id) : null);
   }
 
+  const tags = (nodes: Category[] | null): CategoryTag[] => {
+    if (!nodes) { return [] }
+    let arr: {id: number, name: string}[] = []
+    nodes.forEach((node) => {
+      arr.push({ id: node.id!, name: node.tag! })
+      arr = arr.concat(tags(node.children))
+    })
+    return arr
+  }
+
   const fetchCategories = async () => {
-    fetch('http://localhost:3200/admin/categories')
+    fetch(`${process.env.API_HOST}/admin/categories`)
       .then(resp => resp.json())
       .then(json => {
         setCategories(json);
         setCategoriesLoading(false);
+      })
+  };
+
+  const updateCategory = async (id: number | null, tag: string | null) => {
+    if (!id || !tag) { return }
+
+    const body = new FormData();
+    body.append('tag', tag);
+
+    fetch(`${process.env.API_HOST}/admin/categories/${id}`, { method: 'PUT', body: body })
+      .then(() => {
+        fetchCategories()
       })
   };
 
@@ -57,7 +85,9 @@ export const CategoriesProvider = ({ children }: { children: React.ReactNode }) 
         currentCategory,
         selectCategory,
         categoriesLoading,
-        setCategoriesLoading 
+        setCategoriesLoading,
+        updateCategory,
+        tags,
         }}
       >
       {children}
